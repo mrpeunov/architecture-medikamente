@@ -1,0 +1,48 @@
+@startuml
+!include <C4/C4_Context.puml>
+
+title Medikamente - Privacy By Design (TO BE)
+
+LAYOUT_LEFT_RIGHT()
+
+Person(patient, "Пациент", "Записывается на прием, просматривает свои данные")
+Person(reception, "Сотрудник ресепшена", "Управляет расписанием, договорами и коммуникациями с пациентами")
+Person(doctor, "Медицинский специалист", "Ведет прием и медицинские записи пациентов")
+Person(cashier, "Кассир", "Принимает оплату")
+Person(accountant, "Бухгалтер", "Ведет финансовый и налоговый учет")
+Person(warehouser, "Сотрудник склада", "Ведёт учёт ТМЦ")
+
+System_Ext(lab, "Лаборатория анализов", "Внешняя лаборатория с API")
+System_Ext(bank, "Банковский эквайринг", "Платежные транзакции и статусы операций")
+System_Ext(notify, "Сервис уведомлений", "SMS/Push/Voice уведомления пациентам и сотрудникам")
+System_Ext(legacy1c, "1C (бухгалтерия и склад)", "Существующие учетные системы в переходный период")
+
+System_Boundary(medikamente, "Целевая цифровая платформа Medikamente") {
+    System(corePlatform, "Единая платформа записи и ведения пациентов", "Портал пациента, портал ресепшена, CRM, расписание, медицинские записи")
+    System(privacyLayer, "Privacy & Data Governance Layer", "Согласия на обработку ПДн, тэгирование, ABAC/RBAC")
+    System(apiGuard, "Secure API & Integration Layer", "API gateway, schema validation, шифрование")
+    System(analyticsLayer, "Analytics Layer", "Lakehouse, ETL/ELT, обфускация, маскировка, BI/ML/AI контур")
+    System(auditSec, "Security Monitoring & Audit Layer", "Логирование доступов, анализ, мониторинг, алертинг")
+}
+
+Rel(patient, corePlatform, "Запись, личный кабинет, просмотр только своих данных")
+Rel(reception, corePlatform, "Управление приемами и договорами")
+Rel(doctor, corePlatform, "Работа с медицинской картой пациента")
+Rel(cashier, corePlatform, "Платежи и сверка оплат")
+Rel(accountant, corePlatform, "Получение финансовых данных и выгрузок")
+Rel(warehouser, corePlatform, "Ведение учёта ТМЦ")
+
+Rel(corePlatform, privacyLayer, "Проверка согласий, классификация и политика доступа к данным", "Internal API")
+Rel(corePlatform, apiGuard, "Внешние и межсистемные вызовы через защищенный слой", "Internal API")
+Rel(corePlatform, analyticsLayer, "Передача данных для аналитики по политикам минимизации", "Event/Data Pipelines")
+
+Rel(apiGuard, lab, "Интеграция лабораторных заказов и результатов", "HTTPS/mTLS + signed JWT")
+Rel(corePlatform, bank, "Платежные операции", "HTTPS + PCI DSS controls")
+Rel(corePlatform, notify, "Уведомления о записи/переносе/отмене", "API")
+Rel(corePlatform, legacy1c, "Переходная синхронизация учета", "Secure ETL/API")
+
+Rel(privacyLayer, analyticsLayer, "Политики обезличивания, классификация и контроль доступа", "Policy-as-code")
+Rel(privacyLayer, auditSec, "Передача политик, инцидентов и результатов проверок", "Control events")
+Rel(analyticsLayer, auditSec, "Логи доступа к аналитическим витринам и моделям", "Audit events")
+
+@enduml

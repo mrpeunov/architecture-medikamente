@@ -1,0 +1,41 @@
+@startuml
+!include <C4/C4_Container.puml>
+
+title Medikamente - Data Classification MVP
+
+LAYOUT_LEFT_RIGHT()
+
+System_Ext(sourceSystems, "Source Systems", "Core platform, лаборатория, legacy, batch-файлы")
+System_Ext(privacyLayer, "Privacy & Data Governance Layer", "Теги и политики обработки данных")
+System_Ext(auditLayer, "Security Monitoring & Audit", "Аудит ключевых событий")
+
+System_Boundary(classificationPlatform, "Data Classification Platform") {
+    Container(ingestion, "Ingestion Gateway", "Batch/API", "Принимает данные и пишет в raw-слой")
+    Container(rawLanding, "Raw Landing", "Object Storage", "Временное хранение исходных данных")
+    Container(classifier, "Classification Engine", "Service", "Определяет теги med:* и выявляет новые поля")
+    Container(policyDecision, "Policy Decision", "Policy-as-Code", "Решает, куда направить данные")
+    Container(transform, "De-identification Service", "Masking/Tokenization", "Маскирование и псевдонимизация")
+    Container(quarantine, "Quarantine", "Protected Storage", "Изоляция спорных данных")
+}
+
+System_Boundary(analyticsPlatform, "Analytics Storage") {
+    Container(confidentialLayer, "Confidential Layer", "DWH", "Чувствительные данные с ограниченным доступом")
+    Container(pseudonymizedLayer, "Pseudonymized Layer", "DWH", "Основной слой для BI/ML")
+    Container(publicMarts, "Public/Aggregated Marts", "Data Marts", "Обезличенные и агрегированные витрины")
+}
+
+Rel(sourceSystems, ingestion, "Передают batch-данные")
+Rel(ingestion, rawLanding, "Сохраняет")
+Rel(rawLanding, classifier, "Передаёт данные на классификацию")
+Rel(privacyLayer, classifier, "Передаёт словарь тегов и правила")
+Rel(privacyLayer, policyDecision, "Передаёт политики")
+Rel(classifier, policyDecision, "Передаёт результаты классификации")
+Rel(policyDecision, transform, "Отправляет разрешённые данные")
+Rel(policyDecision, quarantine, "Отправляет спорные данные")
+Rel(transform, confidentialLayer, "Грузит по отдельной политике")
+Rel(transform, pseudonymizedLayer, "Грузит после псевдонимизации")
+Rel(transform, publicMarts, "Грузит агрегаты")
+Rel(classifier, auditLayer, "Пишет события классификации")
+Rel(policyDecision, auditLayer, "Передаёт события")
+
+@enduml
